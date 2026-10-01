@@ -1,0 +1,9 @@
+version: 1
+release: "1.4.2"
+status: REAL_DATA_PENDING
+physical_mapping_status: blocked_until_authenticated_inventory
+logical_roles:
+  - operations
+  - preoperative_results
+  - admissions
+  - outcomes

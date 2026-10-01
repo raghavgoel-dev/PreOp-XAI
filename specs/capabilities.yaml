@@ -1,0 +1,8 @@
+version: 1
+real_data_status: REAL_DATA_PENDING
+mortality: blocked
+acute_kidney_injury: blocked
+early_icu_admission: blocked
+prolonged_invasive_support: blocked
+composite: unsupported
+chronology: unsupported
