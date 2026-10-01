@@ -1,0 +1,10 @@
+version: 1
+primary:
+  name: in_hospital_mortality
+  real_status: blocked_until_linkage_and_timing_audit
+  synthetic_status: supported_for_software_validation
+secondary:
+  acute_kidney_injury: blocked_until_capability_audit
+  early_icu_admission: blocked_until_capability_audit
+  prolonged_invasive_support: blocked_until_capability_audit
+composite_status: unsupported

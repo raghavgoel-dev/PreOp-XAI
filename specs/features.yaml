@@ -1,0 +1,5 @@
+version: 1
+prediction_cutoff: operation_start
+strict_rule: "availability_verified and available_at < operation_start"
+proxy_analysis_status: separate_sensitivity_analysis
+unknown_physical_columns: blocked_until_local_audit
