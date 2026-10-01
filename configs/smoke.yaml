@@ -1,0 +1,24 @@
+release: "1.4.2"
+data_kind: synthetic
+source:
+  official_url: "https://physionet.org/content/inspire/1.4.2/"
+paths: {}
+windows: {strict_days: 30, proxy_days: 30}
+split: {strategy: grouped_random, train_fraction: 0.6, validation_fraction: 0.2, test_fraction: 0.2}
+cross_validation: {folds: 2, repeats: 1}
+models:
+  logistic_regression: {regularization_values: [0.1, 1.0]}
+  random_forest: {estimator_values: [20], depth_values: [4]}
+  xgboost: {estimator_values: [20], depth_values: [3]}
+  explainable_boosting: {interaction_values: [0], round_values: [50]}
+weighting: {strategy: balanced}
+calibration: {method: sigmoid}
+threshold: {policy: omit}
+evaluation: {bootstrap_replicates: 25, refit_seeds: 2, explanation_bootstrap_refits: 2}
+explanations: {background_rows: 32, evaluation_rows: 64}
+subgroups: {minimum_cell_size: 5}
+suppression: {minimum_count: 5}
+resources: {estimator_threads: 2, max_rows: 64, sequential_training: true}
+logging: {level: INFO}
+ui: {host: "127.0.0.1", port: 8501}
+synthetic: {seed: 42, rows: 64}
