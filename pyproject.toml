@@ -1,0 +1,97 @@
+[project]
+name = "preop-xai"
+version = "0.1.0"
+description = "Leakage-safe preoperative risk research pipeline"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "anyio>=4.11,<5",
+    "httpx2[http2,brotli,zstd]>=2.13,<3",
+    "interpret>=0.7,<0.8",
+    "joblib>=1.5,<2",
+    "matplotlib>=3.10,<4",
+    "numpy>=2.2,<3",
+    "plotly>=6.3,<7",
+    "polars>=1.33,<2",
+    "pydantic>=2.11,<3",
+    "pydantic-settings>=2.10,<3",
+    "pyyaml>=6.0,<7",
+    "rich>=14.1,<15",
+    "scikit-learn>=1.7,<2",
+    "scipy>=1.15,<2",
+    "shap>=0.48,<0.50",
+    "statsmodels>=0.14,<0.15",
+    "streamlit>=1.49,<2",
+    "threadpoolctl>=3.6,<4",
+    "typer>=0.21,<0.22",
+    "xgboost>=3.0,<4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.31,<2",
+    "pytest>=8.4,<9",
+    "pytest-cov>=6.2,<8",
+    "ruff>=0.13,<0.15",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/preop_xai"]
+
+[tool.basedpyright]
+typeCheckingMode = "all"
+pythonVersion = "3.12"
+pythonPlatform = "All"
+include = ["src", "tests"]
+exclude = ["**/__pycache__", "**/.venv", "**/build", "**/dist"]
+reportUnusedCallResult = "warning"
+reportUnnecessaryTypeIgnoreComment = "error"
+reportUnusedVariable = "error"
+reportMissingParameterType = "error"
+reportPrivateUsage = "error"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["COM812", "ISC001", "D203", "D213", "CPY001", "FBT001", "FBT002", "TD002", "TD003", "FIX002"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "ARG", "PLR2004", "SLF001", "D"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Argument", "typer.Option"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+filterwarnings = [
+    "error",
+    "ignore:'click\\.utils\\.get_binary_stream' is deprecated.*:DeprecationWarning:typer",
+    "ignore:'click\\.utils\\.get_text_stream' is deprecated.*:DeprecationWarning:typer",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
