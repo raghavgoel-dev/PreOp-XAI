@@ -120,9 +120,7 @@ def build_cohort(
         selected_rows=cohort.height,
         excluded_invalid_key=_reason_count(classified, "invalid_key"),
         excluded_invalid_time=_reason_count(classified, "invalid_time"),
-        excluded_unrepresentable_age=_reason_count(
-            classified, "unrepresentable_age"
-        ),
+        excluded_unrepresentable_age=_reason_count(classified, "unrepresentable_age"),
         excluded_donor=_reason_count(classified, "donor"),
         excluded_asa6=_reason_count(classified, "asa6"),
         excluded_later_operation=eligible.height - cohort.height,
