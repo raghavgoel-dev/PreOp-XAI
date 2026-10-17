@@ -1,0 +1,26 @@
+protocol_version: "1.0"
+title: "Explainable preoperative mortality risk prediction in MOVER EPIC"
+raw_dir: data/EPIC_EMR/EMR
+output_dir: artifacts/study
+feature_map: configs/feature_map.yaml
+outcomes: configs/outcomes.yaml
+seed: 2026
+folds: 5
+evaluation_bootstraps: 1000
+stability_refits: 10
+review:
+  age_semantics: false
+  asa_mapping: false
+  anesthesia_boundary: false
+  static_predictor_provenance: false
+  mortality_hospitalization_linkage: false
+  mortality_dispositions: false
+  reviewer: ""
+  evidence: ""
+respiratory:
+  enabled: false
+  postoperative_meaning: false
+  explicit_negatives: false
+  sufficient_events: false
+  reviewer: ""
+  evidence: ""

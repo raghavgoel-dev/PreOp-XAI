@@ -12,6 +12,9 @@ dependencies = [
   "xgboost", "shap", "matplotlib", "seaborn", "pyyaml", "joblib", "typer",
 ]
 
+[project.scripts]
+preop-xai = "preop_xai.cli:app"
+
 [dependency-groups]
 dev = ["pytest", "ruff", "jupyterlab", "ipykernel"]
 

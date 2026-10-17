@@ -91,6 +91,11 @@ def build_report(output: Path) -> Path:
                         continue
                     figure_index.append((local.as_posix(), candidate.is_file()))
     lines.extend(["## Figure index", ""])
+    figure_index.extend(
+        (path.relative_to(output).as_posix(), True)
+        for path in sorted(output.rglob("calibration.png"))
+        if "private" not in path.relative_to(output).parts
+    )
     if not figure_index:
         lines.extend(["No aggregate explanation figures were indexed.", ""])
     for figure, exists in dict(figure_index).items():

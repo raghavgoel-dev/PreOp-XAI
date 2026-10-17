@@ -1,0 +1,51 @@
+version: "1.0"
+reviewed: false
+# Choose collection_proxy with proxy_lag_hours: 24 only after documenting the
+# availability assumption. Strict mode needs an actual result_time source.
+availability: strict
+proxy_lag_hours: 24
+columns:
+  patient_id: MRN
+  operation_id: LOG_ID
+  collection_time: Collection Datetime
+  lab_name: Lab Name
+  value: Observation Value
+  unit: Measurement Units
+# Candidate names/bounds are not an approved source dictionary. Replace using
+# the audit inventories and qualified review before setting reviewed: true.
+labs:
+  hemoglobin:
+    names: [HGB]
+    units: {g/dL: 1.0, g/L: 0.1}
+    min: 0.0
+    max: 30.0
+  platelets:
+    names: [PLT]
+    units: {10^9/L: 1.0, K/uL: 1.0}
+    min: 0.0
+    max: 3000.0
+  creatinine:
+    names: [CREATININE]
+    units: {mg/dL: 1.0, umol/L: 0.011312217194570135}
+    min: 0.0
+    max: 30.0
+  bun:
+    names: [BUN]
+    units: {mg/dL: 1.0}
+    min: 0.0
+    max: 300.0
+  sodium:
+    names: [SODIUM]
+    units: {mmol/L: 1.0, mEq/L: 1.0}
+    min: 70.0
+    max: 200.0
+  potassium:
+    names: [POTASSIUM]
+    units: {mmol/L: 1.0, mEq/L: 1.0}
+    min: 1.0
+    max: 12.0
+  glucose:
+    names: [GLUCOSE]
+    units: {mg/dL: 1.0, mmol/L: 18.0182}
+    min: 0.0
+    max: 2000.0

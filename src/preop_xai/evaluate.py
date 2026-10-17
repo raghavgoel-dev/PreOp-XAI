@@ -258,6 +258,27 @@ def evaluate_models(
     (output / "metrics.json").write_text(
         json.dumps(results, indent=2, allow_nan=False), encoding="utf-8"
     )
+    performance_rows = []
+    for name, model_result in results["models"].items():
+        for variant, scores in (
+            ("raw", model_result["raw"]),
+            ("calibrated", model_result["calibrated"]),
+        ):
+            performance_rows.append(
+                {
+                    "model": name,
+                    "variant": variant,
+                    **scores,
+                    "n": results["n"],
+                    "events": results["events"],
+                    "prevalence": results["prevalence"],
+                    "training_prevalence_brier": model_result["training_prevalence_brier"],
+                }
+            )
+    pd.DataFrame(performance_rows).to_csv(output / "performance.csv", index=False)
+    pd.DataFrame(
+        [{"comparison": name, **interval} for name, interval in results["intervals"].items()]
+    ).to_csv(output / "intervals.csv", index=False)
     np.savez_compressed(
         output / "predictions.npz",
         y=y_array,

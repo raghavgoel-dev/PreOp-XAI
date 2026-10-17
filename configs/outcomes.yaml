@@ -1,0 +1,10 @@
+version: "1.0-unreviewed"
+mortality:
+  reviewed: false
+  positive_descriptions: [Expired]
+  negative_descriptions: [Home Routine]
+  unknown_descriptions: [Transfer, Hospice]
+respiratory:
+  enabled: false
+  reviewed: false
+  rules: []
