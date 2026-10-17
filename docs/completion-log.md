@@ -124,3 +124,93 @@ Implemented SHA-256 seals over code, lockfile, configs, partitions, model bundle
 explanations and stability results. Frozen development and premature test access
 are rejected by regression tests; observed mid-run source drift was also rejected
 through the actual CLI. Final unchanged-source campaign evidence follows.
+
+## Final campaign and reports
+
+### Unlock frozen test evaluation with paired uncertainty
+
+The final unchanged-source campaign on `a0a75fc` evaluated both synthetic
+endpoints successfully, once each, after genuine hash seals. Each produced
+finite paired raw/calibrated tables and 1,000 paired patient-bootstrap samples,
+including operating-point uncertainty and undefined-resample accounting.
+Actual attempts to retrain frozen models and repeat test evaluation exited 1
+with the intended messages.
+
+### Generate research reports flow diagram and limitations
+
+Generated `performance.csv`, `intervals.csv`, calibration plots, grouped/global/
+local explanation figures, stability JSON and aggregate `report.md`. Added
+`workflow.md` with the data-flow diagram, private-artifact boundaries and
+limitations. Synthetic artifacts are explicitly labeled; no clinical findings
+or approval are claimed.
+
+### Record optional VitalDB exclusion from core study
+
+Recorded the plan's optional-extension decision in protocol, workflow and README.
+No VitalDB mixing, target-cohort tuning, extra endpoint or web app was added.
+
+## Final verification
+
+### Exercise synthetic pipeline through actual CLI commands
+
+`uv run --locked preop-xai demo --output artifacts/demo` exited 0, completed
+all persisted stages for both endpoints and wrote `demo_complete.json` with
+`passed: true`. Forty paired stability refits and all four additivity checks
+passed. `verification.md` maps exact invocations to artifacts.
+
+### Audit local EPIC and prove unreviewed modeling rejection
+
+The final actual-source audit exited 0. The real training command using the
+shipped unreviewed configuration exited 1 before data/model access. Clinical
+semantics remain a human review requirement, not a silently deferred software
+feature or a fabricated experiment.
+
+### Run scientific tests lint formatting and diagnostics
+
+On final source: 28 tests passed without skips; Ruff lint/format checks passed;
+installed basedpyright reported zero errors, warnings or notes. Three external
+SHAP/Matplotlib deprecation warnings remain visible. No test was weakened,
+suppressed or deleted to obtain a pass.
+
+### Review evidence and commit each verified increment
+
+Reviewed the scientific boundaries, source diffs, actual command behavior and
+generated plots. Implementation is split into five verified descriptive commits:
+`67282fd`, `d5009ab`, `f4552a6`, `5cbb964`, and `a0a75fc`.
+No attribution trailers were added. The user's pre-existing staged root
+`.gitignore` was neither changed nor included in these commits.
+
+## Delivery and cleanup receipts
+
+### Document every completed task and preserved artifacts
+
+Every task is recorded in this completion log or `workflow.md`; exact command
+scenarios, scientific invariants, evidence paths, regression findings and
+self-review are in `verification.md`. The final audit and explicitly synthetic
+results are intentionally retained under ignored `artifacts/study/` and
+`artifacts/demo/`. The locked environment remains available for reproduction.
+
+### Remove owned run roots caches and resources
+
+All owned command sessions exited before teardown. Removed each path below
+and checked afterward that it did not exist:
+
+- `C:/Users/LENOVO/AppData/Local/Temp/preop-ulw-WgyiyZ`
+- `.pytest_cache`
+- `.ruff_cache`
+- `src/preop_xai/__pycache__`
+- `tests/__pycache__`
+
+The run root contained the owned runtime/transpiler/Matplotlib caches. The
+failed-worker `.omo` QA tree and superseded synthetic campaign were also removed
+with absence receipts. Shared caches, the project environment, authorized data,
+final evidence and the durable notepad were preserved. No browser/server/
+container/listening-port resource was started.
+
+### Report verified scope limitations and atomic commits
+
+The implementation, actual-source audit, complete synthetic campaign, 28 tests
+and static checks are verified. Real clinical experiments require the plan's
+documented age/ASA/timing/provenance/outcome reviews; none was fabricated.
+The final handoff reports this distinction, evidence locations and all atomic
+commit hashes. No push or unrelated staged-file commit was performed.
