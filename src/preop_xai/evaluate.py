@@ -55,7 +55,11 @@ class ModelEvaluation(TypedDict):
     specificity: float | None
     ppv: float | None
     npv: float | None
+    accuracy: float | None
     f1: float | None
+    predicted_positives: int | None
+    predicted_positive_fraction: float | None
+    predicted_positives_per_10000: float | None
     missing_labs_mean: float
     calibration_status: str
     probability_use: str
@@ -161,6 +165,7 @@ def _operating(y: np.ndarray, p: np.ndarray, threshold: float) -> dict[str, floa
         "specificity": _ratio(tn, tn + fp),
         "ppv": _ratio(tp, tp + fp),
         "npv": _ratio(tn, tn + fn),
+        "accuracy": _ratio(tp + tn, len(y)),
         "f1": _ratio(2 * tp, 2 * tp + fp + fn),
     }
 
@@ -237,6 +242,7 @@ def evaluate_models(
             if p is not None and bundle.threshold is not None
             else {}
         )
+        predicted_positives = tp + fp if tp is not None and fp is not None else None
         results["models"][name] = {
             "raw": _ranking(y_array, raw),
             "calibrated": _ranking(y_array, p) if p is not None else None,
@@ -256,7 +262,17 @@ def evaluate_models(
             "specificity": operating.get("specificity"),
             "ppv": operating.get("ppv"),
             "npv": operating.get("npv"),
+            "accuracy": operating.get("accuracy"),
             "f1": operating.get("f1"),
+            "predicted_positives": predicted_positives,
+            "predicted_positive_fraction": (
+                predicted_positives / len(y_array) if predicted_positives is not None else None
+            ),
+            "predicted_positives_per_10000": (
+                10000 * predicted_positives / len(y_array)
+                if predicted_positives is not None
+                else None
+            ),
             "missing_labs_mean": float(X[list(LABS)].isna().sum(axis=1).mean()),
             "calibration_status": status,
             "probability_use": "research-only" if status == "fitted" else "invalid-diagnostic-only",
@@ -304,7 +320,7 @@ def evaluate_models(
             for variant in ("raw", "calibrated"):
                 metrics = ("auroc", "average_precision", "brier")
                 if variant == "calibrated":
-                    metrics += ("sensitivity", "specificity", "ppv", "npv", "f1")
+                    metrics += ("sensitivity", "specificity", "ppv", "npv", "accuracy", "f1")
                 for metric in metrics:
                     left = values.get(f"{names[0]}.{variant}.{metric}")
                     right = values.get(f"{names[1]}.{variant}.{metric}")

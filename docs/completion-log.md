@@ -1,5 +1,64 @@
 # Task completion log
 
+## Report-artifact implementation and verification - 19 October 2026
+
+Implemented the exact report-reference importer and separate read-only completed
+campaign exporter, including full-precision numerical tables, operating/alert
+values, ROC/PR coordinates, fixed/quantile bins, confusion/endpoint figures,
+saved-refit stability aggregates/figures, provenance manifest and manifest-driven
+Markdown reporting. Existing campaign reporting is campaign-local rather than
+recursively discovering other campaigns. New evaluations add accuracy intervals
+and point-estimate alert fields; legacy outputs remain readable and unchanged.
+
+Exact reference: `artifacts/report-reference-20261019-b20b62dc`. Independent QA
+matched 104 displayed values, eight original PNG streams and all 18 indexed file
+hashes, preserving benchmark qualifications, historical evidence labels and
+unavailable original arrays. Both overwrite and wrong-source CLI calls rejected.
+
+Successful saved-array command proof:
+`artifacts/report-export-fixture-20261019-result-exports`. The retained `-v3`
+visual capture has identical aggregate file bytes. Independent checks
+matched eight series, 112 bin rows, 36 file hashes and 46 report links, including
+sample SD and exclusion of private arrays/fixture patient identifiers. This is
+a constructed completed software fixture, not newly fitted or clinical results.
+All eight reference images and all eleven final generated PNGs were opened.
+
+Full pytest passed **222 tests** with three existing dependency warnings. Full
+Ruff lint/format passed. Fresh semantic diagnostics found no new errors; the four
+previously documented pandas errors in untouched data tests remain, with all
+default-mode warnings retained in the diagnostic receipt. No tests were skipped,
+weakened or suppressed. No project commits or pushes were made.
+
+Historical `artifacts/reliability-20261018` correctly rejects the sealed CLI source
+hash mismatch; all 116 source files remain unchanged. The transfer DOCX also
+changed after the exact archive was captured: its current fingerprint is rejected,
+while the archived original still matches the audited SHA-256. Neither mismatch
+was bypassed or repaired by overwriting sources. Full invocations, precise hashes,
+provenance limitations and cleanup receipts are in `report-artifacts-execution.md`.
+
+## Report-result review and artifact plan - 19 October 2026
+
+Read the supplied `PreOp_XAI_Minor_Project_Report (1).docx`, including its
+result tables and numerical appendix, and visually inspected all eight result
+figures. Independently recomputed all 24 operating-rate cells and four alert
+totals from the four confusion matrices; they agree at the displayed precision.
+Compared current source and selected local aggregate evidence with the report's
+older public-checkout assertions. Exact reference values, provenance, gaps and
+verification limits are recorded in `report-results-audit.md`.
+
+Wrote `report-artifacts-plan.md` for a later implementation session: exact
+illustrative reference import, measured campaign tables/curve coordinates/plots,
+stability exports, manifest-driven reporting, private-data boundaries and
+acceptance checks. No application code, configuration, tests, supplied report or
+existing artifacts were modified, and no training or held-out evaluation ran.
+
+Documentation verification matched all 104 reference value cells directly to
+the DOCX, covered all eight result figures, resolved the local document links
+and passed `git diff --check`. Application tests were not rerun for this
+Markdown-only change. The original illustration arrays were not supplied, so
+their ranking/calibration/stability estimates remain unverified beyond the
+report's displayed values and visual consistency.
+
 ## Reliability and saved-inference completion - 18 October 2026
 
 Completed the original `demo_new` warning investigation, end-to-end implementation

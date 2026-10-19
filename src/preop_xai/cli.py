@@ -105,6 +105,22 @@ def report(config: Config = Path("configs/study.yaml")) -> None:
 
 
 @app.command()
+def export_results(
+    source: Annotated[Path, typer.Option(exists=True, file_okay=False)],
+    output: Annotated[Path, typer.Option()],
+) -> None:
+    """Export completed saved evidence read-only into a fresh artifacts directory."""
+    from preop_xai.result_artifacts import export_results as export
+
+    try:
+        manifest = export(source, output)
+    except (ValueError, FileNotFoundError) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from error
+    typer.echo(f"Saved aggregate result manifest: {manifest}; research only.")
+
+
+@app.command()
 def predict(
     bundle: Annotated[Path, typer.Option(exists=True, file_okay=False)],
     input_path: Annotated[Path, typer.Option("--input", exists=True, dir_okay=False)],

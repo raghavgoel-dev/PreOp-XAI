@@ -29,13 +29,39 @@ The computational minimum is not a sample-size or clinical-readiness criterion.
 
 Evaluation reports raw and calibrated AUROC, average precision and Brier score,
 training-prevalence Brier reference, confusion counts, sensitivity, specificity,
-PPV, NPV and F1. Calibration-in-the-large uses a logit offset; a separate
+PPV, NPV, F1 and accuracy. New evaluations also store alert counts/fractions and
+alerts per 10,000 observations. Accuracy participates in individual and paired
+operating-metric bootstrap intervals; count totals do not. Calibration-in-the-large uses a logit offset; a separate
 joint fit estimates intercept and slope. Five probability bins include counts.
 One thousand seeded patient draws preserve pairing, calculate available raw and
 calibrated intervals and paired differences (including operating measures),
 and count undefined resamples. Calibration parameter estimates are null when
 unestimable or unconverged; their confidence intervals are not implemented.
 Private predictions remain ignored.
+
+## Read-only result derivatives
+
+`preop-xai export-results --source CAMPAIGN --output NEW_ARTIFACTS_DIRECTORY`
+uses saved, named prediction rows and aggregate metrics only after integrity
+preflight. It checks all model/variant arrays against n/events, ranking point
+estimates and frozen confusion counts. It never refits descriptive calibration
+diagnostics: raw rows use `raw_calibration`, calibrated rows use `calibration`,
+including convergence/status/nulls.
+
+Operating exports use `p >= validation_threshold`. Accuracy is `(TP+TN)/n`;
+predicted positives are `TP+FP`, fraction `(TP+FP)/n`, and normalized rate
+`10000*(TP+FP)/n`. Zero denominators remain null. The descriptive
+`test_prevalence_brier_reference=prevalence*(1-prevalence)` is distinct from
+the frozen training-prevalence Brier on test outcomes.
+
+ROC retains all distinct thresholds, including a blank infinity sentinel labeled
+`positive_infinity`. PR uses average precision (AP), with a blank terminal
+threshold labeled `none`; single-class ranking is explicitly unavailable.
+Five fixed-width bins retain empty rows. Separate descriptive quantile bins
+request ten bins, collapse duplicate edges, keep ties together and include
+the minimum in the first right-closed interval; constant probabilities form one
+bin. Full precision is retained in CSVs; figures label Brier to four decimals.
+Source metrics, intervals, predictions, fixed calibration plot and seals are unchanged.
 
 Completed implementation is not clinical validation. Test and CLI execution
 evidence is maintained in `verification.md`.

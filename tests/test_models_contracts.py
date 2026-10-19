@@ -7,7 +7,9 @@ import pytest
 from preop_xai.calibration import calibrate_models, probabilities, sensitivity_threshold
 from preop_xai.evaluate import evaluate_models
 from preop_xai.preprocessing import FEATURES, LABS, feature_matrix, make_preprocessor
+from preop_xai.result_numerics import numerical_tables
 from preop_xai.train import fit_models
+from tests.result_assertions import mapping
 
 
 def clinical_frame() -> pd.DataFrame:
@@ -98,6 +100,30 @@ def test_calibration_keeps_base_models_fixed_and_bootstrap_keeps_pairing(tmp_pat
     paired = results["intervals"]["paired_second_minus_first.calibrated.brier"]
     assert paired["lower"] == paired["upper"] == 0
     assert paired["effective_resamples"] == 40
+    paired_accuracy = results["intervals"]["paired_second_minus_first.calibrated.accuracy"]
+    assert paired_accuracy["lower"] == paired_accuracy["upper"] == 0
+    assert paired_accuracy["effective_resamples"] == 40
+    model = results["models"]["first"]
+    assert model["tp"] is not None and model["tn"] is not None and model["fp"] is not None
+    assert model["predicted_positives"] is not None
+    assert model["accuracy"] == (model["tp"] + model["tn"]) / results["n"]
+    assert model["predicted_positives"] == model["tp"] + model["fp"]
+    assert model["predicted_positive_fraction"] == model["predicted_positives"] / results["n"]
+    assert model["predicted_positives_per_10000"] == (
+        10000 * model["predicted_positives"] / results["n"]
+    )
+    assert results["intervals"]["first.calibrated.accuracy"]["effective_resamples"] == 40
+    assert not any(".raw.accuracy" in key for key in results["intervals"])
+    counts = {"tp", "fp", "tn", "fn", "predicted_positives", "predicted_positive_fraction"}
+    counts.add("predicted_positives_per_10000")
+    assert not any(key.rsplit(".", 1)[-1] in counts for key in results["intervals"])
+    exported = numerical_tables(tmp_path, "mortality", "synthetic")
+    assert len(exported["tables"]["operating_point.csv"]) == 2
+    assert exported["tables"]["operating_point.csv"][0]["accuracy"] == model["accuracy"]
+    assert all(
+        mapping(interval)["status"] == "available"
+        for interval in mapping(exported["metadata"]["accuracy_intervals"]).values()
+    )
 
 
 def test_nonpositive_calibration_is_not_returned_as_risk():
@@ -175,6 +201,20 @@ def test_unestimable_calibration_retains_raw_research_evaluation(tmp_path, scena
     assert result["models"]["lr"]["calibrated"] is None
     assert result["models"]["lr"]["tp"] is None
     assert result["models"]["lr"]["raw"]["brier"] is not None
+    for key in (
+        "accuracy",
+        "predicted_positives",
+        "predicted_positive_fraction",
+        "predicted_positives_per_10000",
+    ):
+        assert result["models"]["lr"][key] is None
+    assert "intervals" in result
+    assert "lr.calibrated.accuracy" not in result["intervals"]
+    exported = numerical_tables(tmp_path, "mortality", "synthetic")
+    assert exported["tables"]["operating_point.csv"] == []
+    assert {row["variant"] for row in exported["tables"]["discrimination_calibration.csv"]} == {
+        "raw"
+    }
 
 
 def test_calibration_diagnostics_do_not_return_unconverged_estimates():

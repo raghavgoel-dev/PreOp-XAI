@@ -8,6 +8,29 @@ on 18 October 2026. Commands run from the repository root unless stated otherwis
 explicit workflow stages; those stages build patient-level tables, fit and calibrate
 two models, explain them, seal the experiment, and evaluate the held-out patients.
 
+### Report-artifact extension - 19 October 2026
+
+Two additional surfaces preserve report references separately from saved campaign
+evidence. `scripts/import_report_reference.py --source DOCX --output NEW_ROOT`
+verifies the audited DOCX fingerprint and archives its exact illustrative tables,
+eight original PNGs, benchmark context and provenance. It imports no clinical/model
+pipeline. `preop-xai export-results --source CAMPAIGN --output NEW_ROOT` generates
+read-only aggregate derivatives after recorded-path seal/completion checks.
+Both refuse existing destinations; exports require ignored artifacts storage
+outside the source campaign. Neither command retrains or reruns evaluation.
+
+`result_artifacts.py` coordinates preflight, tables, file-only figures and a
+manifest written last. Focused `result_integrity`, `result_context`, `result_io`,
+`result_numerics`/bin/curve/operating helpers, stability helpers, `result_plots`,
+`result_manifest` and `result_report` own the corresponding contracts.
+`reporting.build_report` accepts an explicit export manifest and otherwise retains
+campaign-local reporting. Tables, curves, status/availability, calibration rules,
+historical versus derivative hashes and source limitations are machine-readable;
+private arrays/local figures are not copied into derivatives.
+
+Full numerical/storage specifications are in `report-artifacts-plan.md`; actual
+verification and generated paths are in `report-artifacts-execution.md`.
+
 ## Contents
 
 1. [Purpose and terminology](#1-purpose-and-terminology)

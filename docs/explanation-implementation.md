@@ -1,5 +1,28 @@
 # Explanation lane implementation
 
+## Read-only stability derivatives - 19 October 2026
+
+The separate `export-results` command reads `stability.json` and available saved
+private refit NPZs, without fitting or recomputing SHAP. It exports original draw
+IDs by mapping pair positions through `successful_paired_draws`, preserves null
+undefined Spearman values and partial/insufficient statuses, and validates the
+`k*(k-1)/2` pair register and its means.
+
+`stability_importance.csv` distinguishes across-refit sample SD (`ddof=1`) of
+per-refit validation-mean absolute grouped importance from the existing
+patient-centered contribution RMS. Sample-SD error bars are descriptive, not
+confidence intervals; actual importance need not sum to one. Missing unsealed
+arrays retain JSON means but make SD explicitly unavailable. Required sealed
+file mismatches remain errors. Fewer than two successful refits supplies no
+unsupported SD or agreement estimate.
+
+The aggregate derivative indexes existing global SHAP bars and XGBoost
+beeswarm/dependence figures with source hashes, preserving source files.
+It excludes local TP/FP/TN/FN images, patient contribution arrays, draws and
+baselines. LR coefficient links retain their source scaling/encoding
+qualifications; no odds ratios or cross-model SHAP agreement are inferred.
+See `report-artifacts-execution.md` for execution and visual inspection receipts.
+
 ## Protocol 1.1 reliability amendment - 18 October 2026
 
 Finite nonpositive recalibration remains explainable algebraically, but JSON

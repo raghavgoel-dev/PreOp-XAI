@@ -37,13 +37,18 @@ def _load(path: Path):
     return json.loads(path.read_text(encoding="utf-8"), parse_constant=reject_constant)
 
 
-def build_report(output: Path) -> Path:
+def build_report(output: Path, export_manifest: Path | None = None) -> Path:
     """Read metrics/explain/stability JSON below output and write report.md.
 
     Multiple endpoint subdirectories are supported. Missing stages are explicitly
     identified; no clinical or methodological completion is inferred.
     """
     output = Path(output)
+    if export_manifest is not None:
+        from preop_xai.result_manifest import read_manifest
+        from preop_xai.result_report import build_export_report
+
+        return build_export_report(output, read_manifest(export_manifest))
     output.mkdir(parents=True, exist_ok=True)
     lines = [
         "# Preoperative prediction: aggregate research report",
@@ -110,6 +115,12 @@ def build_report(output: Path) -> Path:
             ]
         )
     figure_index = []
+    # A campaign report must not recursively ingest nested reference/other campaigns.
+    aggregate_directories = [
+        output,
+        *(output / endpoint for endpoint in ("mortality", "respiratory")),
+        *(output / endpoint / "test_explanations" for endpoint in ("mortality", "respiratory")),
+    ]
     for filename, heading in (
         ("metrics.json", "Predictive performance"),
         ("stability.json", "Explanation stability"),
@@ -117,9 +128,9 @@ def build_report(output: Path) -> Path:
     ):
         lines.extend([f"## {heading}", ""])
         paths = sorted(
-            path
-            for path in output.rglob(filename)
-            if "private" not in path.relative_to(output).parts
+            directory / filename
+            for directory in aggregate_directories
+            if (directory / filename).is_file()
         )
         if not paths:
             lines.extend([f"Not available: `{filename}`.", ""])
@@ -150,8 +161,8 @@ def build_report(output: Path) -> Path:
     lines.extend(["## Figure index", ""])
     figure_index.extend(
         (path.relative_to(output).as_posix(), True)
-        for path in sorted(output.rglob("calibration.png"))
-        if "private" not in path.relative_to(output).parts
+        for path in sorted(directory / "calibration.png" for directory in aggregate_directories)
+        if path.is_file()
     )
     if not figure_index:
         lines.extend(["No aggregate explanation figures were indexed.", ""])
