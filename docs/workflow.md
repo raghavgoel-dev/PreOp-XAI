@@ -24,7 +24,12 @@ Mutation of sealed inputs causes rejection; the test unlock is recorded once.
 To amend the protocol, use a new output directory and record the rationale.
 
 The model bundle contains fitted preprocessing, selected estimator, calibrator,
-threshold and schema through the fitted column transformer. XGBoost is also
+threshold and schema through the fitted column transformer. Protocol 1.1 also
+writes `bundle.json` with explicit units/bounds/runtime/schema/model hash and
+`calibration.json` with validation counts and fit status. `predict` loads those
+artifacts without fitting; see `inference.md`. Calibration attempts can be
+frozen even when invalid/unestimable so failures remain reportable; this never
+approves calibrated inference. XGBoost is also
 saved in native JSON. LR coefficients record their scaling/encoding conventions.
 Run manifests record code/config/lock hashes, raw-input checksums, observed
 software/OS/hardware and seeds. Split membership, models, predictions and

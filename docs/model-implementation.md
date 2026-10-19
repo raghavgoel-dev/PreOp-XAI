@@ -12,17 +12,29 @@ win ties. Folds are reduced deterministically only when minority counts require
 it; fewer than two events or non-events blocks training. There is no validation
 early stopping, class weighting or oversampling.
 
+Protocol 1.1 adds strict versioned saved-model inference and separate execution,
+review, calibration, internal-evaluation and clinical-use statuses. See
+`inference.md` and `reliability-audit.md` for contracts and measured evidence.
+
 Validation fits a one-dimensional unpenalized logistic recalibrator on raw
 log-odds. A highest threshold attaining at least 80% sensitivity includes tied
 scores. No base-model refit occurs after calibration. Nonpositive calibration
-slopes are flagged rather than hidden.
+slopes are flagged rather than hidden. Ordinary calibrated prediction rejects
+them; explicit raw-only research inference withholds calibrated probabilities,
+thresholds and classifications. Evaluation and SHAP can retain finite invalid
+fits only as labeled research diagnostics. Insufficient classes/events,
+constant/separated scores or failed optimization leave calibration unavailable,
+with raw-only research evaluation rather than invented calibrated measures.
+The computational minimum is not a sample-size or clinical-readiness criterion.
 
 Evaluation reports raw and calibrated AUROC, average precision and Brier score,
 training-prevalence Brier reference, confusion counts, sensitivity, specificity,
 PPV, NPV and F1. Calibration-in-the-large uses a logit offset; a separate
 joint fit estimates intercept and slope. Five probability bins include counts.
-One thousand seeded patient draws preserve pairing, calculate both raw and
-calibrated intervals and paired differences, and count undefined resamples.
+One thousand seeded patient draws preserve pairing, calculate available raw and
+calibrated intervals and paired differences (including operating measures),
+and count undefined resamples. Calibration parameter estimates are null when
+unestimable or unconverged; their confidence intervals are not implemented.
 Private predictions remain ignored.
 
 Completed implementation is not clinical validation. Test and CLI execution

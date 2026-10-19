@@ -1,0 +1,4 @@
+age,sex,asa,hemoglobin,platelets,creatinine,bun,sodium,potassium,glucose
+45,F,2,12.7,210,1.0,18,140,4.0,100
+68,M,3,,180,1.2,,138,4.3,125
+32,,unknown,13.1,,,,,,95

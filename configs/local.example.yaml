@@ -1,6 +1,6 @@
 # Copy to configs/local.yaml (ignored); pass --config configs/local.yaml.
 # Use absolute paths or paths relative to the repository root.
-protocol_version: "1.0"
+protocol_version: "1.1"
 raw_dir: data/EPIC_EMR/EMR
 output_dir: artifacts/study
 feature_map: configs/feature_map.yaml

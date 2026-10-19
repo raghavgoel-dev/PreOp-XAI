@@ -31,6 +31,14 @@ The report is `artifacts/demo/report.md`. These are software checks, not clinica
 results. Nonpositive calibration slopes are reported, never optimized away.
 Use a new output directory for a new campaign; existing evidence is not overwritten.
 
+Execution success is separate from predictive reliability. Read the
+[measured calibration diagnosis and readiness audit](docs/reliability-audit.md)
+and [saved-model inference contract](docs/inference.md). New campaigns produce
+`status.json`, endpoint `calibration.json`, and versioned `bundle.json` metadata.
+The `predict` command loads fitted preprocessing and models without retraining;
+invalid calibration is rejected unless raw-only research output is explicitly
+requested. Synthetic results and threshold classifications are not clinical advice.
+
 ## Authorized MOVER EPIC analysis
 
 Place authorized CSV files in `data/EPIC_EMR/EMR`, or copy
@@ -93,6 +101,8 @@ review gates and frozen test access. Final tables and figures are script-generat
 
 ## Research record
 
+- [Complete codebase, architecture, configuration, and CLI guide](docs/codebase-guide.md)
+- [Actual MOVER EPIC run checks and research-readiness blockers](docs/real-data-verification.md)
 - [Protocol](docs/protocol.md)
 - [Data dictionary and local audit](docs/data_dictionary.md)
 - [Data implementation](docs/data-implementation.md)

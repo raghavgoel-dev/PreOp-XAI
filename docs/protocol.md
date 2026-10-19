@@ -1,4 +1,12 @@
-# Study protocol, version 1.0
+# Study protocol, version 1.1
+
+Amendment, 18 October 2026: new campaigns distinguish execution from reliability
+and use the invalid/unestimable calibration policy in `reliability-audit.md`.
+Default inference rejects unreliable calibration; explicit research-only
+inference returns raw scores without calibrated probabilities/classifications.
+Research evaluation preserves finite nonpositive fits as labeled invalid-fit
+diagnostics, and reports unestimable calibrated results as unavailable. This
+policy was fixed before the new campaign; prior campaigns remain unchanged.
 
 Source documents: *Preoperative XAI Project Plan* and *Research Synopsis*,
 17 October 2026. This implementation is research software, not evidence of

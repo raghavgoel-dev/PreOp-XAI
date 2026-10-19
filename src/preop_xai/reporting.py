@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 LIMITATIONS = [
-    "This is retrospective internal validation in MOVER EPIC, not prospective "
+    "Retrospective internal evaluation, when completed, is not prospective "
     "clinical validation or evidence of deployment readiness.",
     "Mortality is in-hospital mortality, not 30-day mortality. Respiratory analysis "
     "requires reviewed postoperative and explicit-negative semantics; absence of "
@@ -52,6 +52,63 @@ def build_report(output: Path) -> Path:
         "not a clinical approval or an endpoint-review determination.",
         "",
     ]
+    status_path = output / "status.json"
+    lines.extend(["## Execution and reliability status", ""])
+    if status_path.exists():
+        status = _load(status_path)
+        if status["synthetic_only"]:
+            lines.extend(["**SYNTHETIC SOFTWARE DEMONSTRATION ONLY - NO CLINICAL RESULTS.**", ""])
+        lines.extend(
+            [
+                f"- Pipeline execution: **{status['pipeline_execution']}**.",
+                f"- Data review: **{status['data_review']}**.",
+                f"- Clinical use: **{status['clinical_use']}**.",
+                "",
+            ]
+        )
+        for endpoint, details in status["endpoints"].items():
+            lines.extend(
+                [
+                    f"### {endpoint}",
+                    "",
+                    f"- Endpoint review: **{details['review']}**.",
+                    f"- Internal evaluation: **{details['internal_validation']}**.",
+                    f"- Predictive reliability: **{details['predictive_reliability']}**.",
+                ]
+            )
+            for model, diagnostic in details["calibration"].items():
+                lines.append(
+                    f"- {model} calibration: **{diagnostic['calibration_status']}**; "
+                    f"n={diagnostic.get('calibration_n')}, "
+                    f"events={diagnostic.get('calibration_events')}, "
+                    f"non-events={diagnostic.get('calibration_nonevents')}, "
+                    f"intercept={diagnostic.get('calibration_intercept')}, "
+                    f"slope={diagnostic.get('calibration_slope')}."
+                )
+            lines.append("")
+        lines.extend(
+            [
+                "A completed run is not evidence of reliable prediction. Nonpositive-slope "
+                "calibrated metrics, thresholds and SHAP are **invalid-fit research diagnostics "
+                "only**. Inference rejects them by default; explicit research-only inference "
+                "returns raw scores without calibrated probabilities or classifications. "
+                "Unestimable calibration is unavailable, not silently replaced.",
+                "",
+                "Bootstrap intervals condition on fitted models, calibrators and thresholds; "
+                "they exclude model-selection/recalibration uncertainty. Calibration parameter "
+                "intervals are not implemented. A positive slope alone establishes "
+                "no performance target.",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "Status evidence unavailable; execution, review and validation "
+                "are not established.",
+                "",
+            ]
+        )
     figure_index = []
     for filename, heading in (
         ("metrics.json", "Predictive performance"),

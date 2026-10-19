@@ -86,6 +86,7 @@ class Settings:
     respiratory_enabled: bool
     respiratory_approved: bool
     review_evidence: str
+    synthetic_only: bool = False
 
 
 def load_settings(path: Path) -> Settings:
@@ -126,6 +127,7 @@ def load_settings(path: Path) -> Settings:
         respiratory_enabled=respiratory.get("enabled") is True,
         respiratory_approved=respiratory_approved,
         review_evidence=str(review.get("evidence", "")),
+        synthetic_only=raw.get("synthetic_only") is True,
     )
 
 

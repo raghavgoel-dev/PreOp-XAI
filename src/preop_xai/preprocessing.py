@@ -2,6 +2,7 @@
 
 from typing import Final
 
+import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import MissingIndicator, SimpleImputer
@@ -23,13 +24,28 @@ def get_column(frame: pd.DataFrame, name: str) -> pd.Series:
 
 def feature_matrix(frame: pd.DataFrame) -> pd.DataFrame:
     """Reject accidental extra inputs at the explicit model boundary."""
+    if not frame.columns.is_unique:
+        raise ValueError("Feature names must be unique.")
     if set(frame.columns) != set(FEATURES):
         raise ValueError(f"Expected fixed clinical inputs {FEATURES}; got {tuple(frame.columns)}")
     result = frame.loc[:, list(FEATURES)].copy()
     result[list(NUMERIC)] = result[list(NUMERIC)].astype(float)
+    if np.isinf(result[list(NUMERIC)].to_numpy()).any():
+        raise ValueError("Numeric predictors cannot contain nonfinite infinity values.")
+    if get_column(result, "age").isna().any():
+        raise ValueError("Age cannot be missing.")
     for column in ("sex", "asa"):
         result[column] = get_column(result, column).fillna("unknown").astype(str)
     return result
+
+
+def binary_outcomes(frame: pd.DataFrame, labels: pd.Series) -> np.ndarray:
+    """Require complete binary labels in exactly the feature-row index order."""
+    if len(frame) != len(labels) or not frame.index.equals(labels.index):
+        raise ValueError("Feature rows and outcome labels must be aligned by index.")
+    if not len(labels) or labels.isna().any() or not labels.isin([0, 1]).all():
+        raise ValueError("Outcomes must be nonempty, complete binary values 0 and 1.")
+    return labels.to_numpy(dtype=int)
 
 
 def make_preprocessor(scale: bool) -> ColumnTransformer:

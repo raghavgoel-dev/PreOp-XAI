@@ -161,6 +161,7 @@ def run_demo(output: Path, seed: int = 2026) -> None:
     feature_path.write_text(yaml.safe_dump(mapping), encoding="utf-8")
     outcome_path.write_text(yaml.safe_dump(outcomes), encoding="utf-8")
     config = {
+        "protocol_version": "1.1",
         "synthetic_only": True,
         "raw_dir": str(raw.resolve()),
         "output_dir": str(output.resolve()),
@@ -222,6 +223,20 @@ def run_demo(output: Path, seed: int = 2026) -> None:
             "synthetic_only": True,
             "endpoints": ["mortality", "respiratory"],
             "passed": True,
+            "pipeline_execution": "complete",
+            "predictive_reliability": "not-established; see per-model calibration status",
+            "clinical_use": "unsupported-research-only",
         },
     )
-    typer.echo(json.dumps({"synthetic_only": True, "report": str(report), "passed": True}))
+    typer.echo(
+        json.dumps(
+            {
+                "synthetic_only": True,
+                "report": str(report),
+                "passed": True,
+                "pipeline_execution": "complete",
+                "predictive_reliability": "not-established; see report calibration status",
+                "clinical_use": "unsupported-research-only",
+            }
+        )
+    )

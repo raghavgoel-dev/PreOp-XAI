@@ -55,3 +55,17 @@ def test_training_cannot_modify_frozen_analysis(tmp_path):
     # When/Then: development stops before reading or fitting any training table.
     with pytest.raises(ValueError, match="Analysis is frozen"):
         run_stage("train", settings)
+
+
+def test_report_completion_cannot_approve_missing_study_stages(tmp_path):
+    # Given: an unreviewed campaign without cohort, models or evaluation.
+    from preop_xai.status import write_status
+
+    settings = replace(load_settings(Path("configs/study.yaml")), output_dir=tmp_path)
+    # When: generating an aggregate status for a report.
+    result = write_status(settings, "report")
+    # Then: report execution is distinct from data review and validation.
+    assert result["pipeline_execution"] == "incomplete"
+    assert result["data_review"] == "blocked"
+    assert result["endpoints"]["mortality"]["internal_validation"] == "not-completed"
+    assert result["clinical_use"] == "unsupported-research-only"

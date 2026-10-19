@@ -19,8 +19,8 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from preop_xai.calibration import probabilities
-from preop_xai.preprocessing import LABS
+from preop_xai.calibration import calibration_status, probabilities
+from preop_xai.preprocessing import LABS, binary_outcomes
 from preop_xai.train import ModelBundle
 
 
@@ -29,6 +29,7 @@ class CalibrationParameters(TypedDict):
     joint_intercept: float | None
     joint_slope: float | None
     converged: bool
+    status: str
 
 
 class CalibrationBin(TypedDict):
@@ -39,22 +40,26 @@ class CalibrationBin(TypedDict):
 
 class ModelEvaluation(TypedDict):
     raw: dict[str, float | None]
-    calibrated: dict[str, float | None]
+    calibrated: dict[str, float | None] | None
     training_prevalence_brier: float
     raw_calibration: CalibrationParameters
-    calibration: CalibrationParameters
+    calibration: CalibrationParameters | None
     bins: list[CalibrationBin]
-    threshold: float
-    tp: int
-    fp: int
-    tn: int
-    fn: int
+    raw_bins: list[CalibrationBin]
+    threshold: float | None
+    tp: int | None
+    fp: int | None
+    tn: int | None
+    fn: int | None
     sensitivity: float | None
     specificity: float | None
     ppv: float | None
     npv: float | None
     f1: float | None
     missing_labs_mean: float
+    calibration_status: str
+    probability_use: str
+    classification_use: str
 
 
 class EvaluationInterval(TypedDict):
@@ -77,14 +82,23 @@ class EvaluationResult(TypedDict):
 
 def calibration_parameters(y: np.ndarray, probability: np.ndarray) -> CalibrationParameters:
     """Estimate offset intercept and separate joint intercept/slope by likelihood."""
+    unavailable: CalibrationParameters = {
+        "offset_intercept": None,
+        "joint_intercept": None,
+        "joint_slope": None,
+        "converged": False,
+        "status": "not-estimable",
+    }
     if len(np.unique(y)) < 2:
-        return {
-            "offset_intercept": None,
-            "joint_intercept": None,
-            "joint_slope": None,
-            "converged": False,
-        }
+        unavailable["status"] = "single-class"
+        return unavailable
     score = logit(np.clip(probability, 1e-12, 1 - 1e-12))
+    if np.ptp(score) <= np.finfo(float).eps * max(1.0, float(np.max(np.abs(score)))):
+        unavailable["status"] = "constant-scores"
+        return unavailable
+    if score[y == 0].max() <= score[y == 1].min() or score[y == 1].max() <= score[y == 0].min():
+        unavailable["status"] = "separated-scores"
+        return unavailable
 
     def offset_loss(theta: np.ndarray) -> float:
         eta = score + theta[0]
@@ -94,13 +108,32 @@ def calibration_parameters(y: np.ndarray, probability: np.ndarray) -> Calibratio
         eta = theta[0] + theta[1] * score
         return float(np.sum(np.logaddexp(0, eta) - y * eta))
 
-    offset = minimize(offset_loss, np.array([0.0]), method="BFGS", tol=1e-6)
-    joint = minimize(joint_loss, np.array([0.0, 1.0]), method="BFGS", tol=1e-6)
+    from scipy.special import expit
+
+    design = np.column_stack([np.ones(len(score)), score])
+    offset = minimize(
+        offset_loss,
+        np.array([0.0]),
+        method="BFGS",
+        tol=1e-6,
+        jac=lambda theta: np.array([np.sum(expit(score + theta[0]) - y)]),
+    )
+    joint = minimize(
+        joint_loss,
+        np.array([0.0, 1.0]),
+        method="BFGS",
+        tol=1e-6,
+        jac=lambda theta: design.T @ (expit(design @ theta) - y),
+    )
+    if not (offset.success and joint.success and np.isfinite(joint.x).all()):
+        unavailable["status"] = "optimizer-not-converged"
+        return unavailable
     return {
         "offset_intercept": float(offset.x[0]),
         "joint_intercept": float(joint.x[0]),
         "joint_slope": float(joint.x[1]),
         "converged": bool(offset.success and joint.success),
+        "status": "estimated",
     }
 
 
@@ -132,6 +165,21 @@ def _operating(y: np.ndarray, p: np.ndarray, threshold: float) -> dict[str, floa
     }
 
 
+def _bins(y: np.ndarray, probability: np.ndarray) -> list[CalibrationBin]:
+    bins: list[CalibrationBin] = []
+    for start, end in zip(np.linspace(0, 1, 6)[:-1], np.linspace(0, 1, 6)[1:], strict=True):
+        mask = (probability >= start) & ((probability < end) if end < 1 else (probability <= end))
+        if mask.any():
+            bins.append(
+                {
+                    "n": int(mask.sum()),
+                    "predicted": float(probability[mask].mean()),
+                    "observed": float(y[mask].mean()),
+                }
+            )
+    return bins
+
+
 def evaluate_models(
     bundles: dict[str, ModelBundle],
     X: pd.DataFrame,
@@ -142,9 +190,9 @@ def evaluate_models(
 ) -> EvaluationResult:
     """Evaluate both models on the same held-out patients and bootstrap draws."""
     output.mkdir(parents=True, exist_ok=True)
-    y_array = np.asarray(y, dtype=int)
-    if not len(y_array) or not np.isin(y_array, [0, 1]).all():
-        raise ValueError("Evaluation requires nonempty, complete binary outcomes.")
+    y_array = binary_outcomes(X, y)
+    if bootstraps < 1:
+        raise ValueError("At least one paired bootstrap resample is required.")
     results: EvaluationResult = {
         "n": len(y_array),
         "events": int(y_array.sum()),
@@ -157,46 +205,62 @@ def evaluate_models(
     fig, ax = plt.subplots(figsize=(7, 5), layout="constrained")
     ax.plot([0, 1], [0, 1], "--", color="gray", label="Ideal calibration")
     for name, bundle in bundles.items():
-        if bundle.threshold is None:
+        status = calibration_status(bundle)
+        available = status in {"fitted", "nonpositive-slope"}
+        if available and bundle.threshold is None:
             raise ValueError("Threshold must be frozen before test evaluation.")
-        p = probabilities(bundle, X)
+        p = probabilities(bundle, X, allow_invalid=True) if available else None
         raw = probabilities(bundle, X, calibrated=False)
-        predictions[name] = {"raw": raw, "calibrated": p}
-        tn, fp, fn, tp = map(
-            int, confusion_matrix(y_array, p >= bundle.threshold, labels=[0, 1]).ravel()
+        predictions[name] = {"raw": raw}
+        tn = fp = fn = tp = None
+        bins = _bins(y_array, p) if p is not None else []
+        raw_bins = _bins(y_array, raw)
+        ax.plot(
+            [b["predicted"] for b in raw_bins],
+            [b["observed"] for b in raw_bins],
+            "x--",
+            label=f"{name} raw",
         )
-        bins: list[CalibrationBin] = []
-        for start, end in zip(np.linspace(0, 1, 6)[:-1], np.linspace(0, 1, 6)[1:], strict=True):
-            mask = (p >= start) & ((p < end) if end < 1 else (p <= end))
-            if mask.any():
-                bins.append(
-                    {
-                        "n": int(mask.sum()),
-                        "predicted": float(p[mask].mean()),
-                        "observed": float(y_array[mask].mean()),
-                    }
-                )
-        ax.plot([b["predicted"] for b in bins], [b["observed"] for b in bins], "o-", label=name)
+        if p is not None and bundle.threshold is not None:
+            predictions[name]["calibrated"] = p
+            tn, fp, fn, tp = map(
+                int, confusion_matrix(y_array, p >= bundle.threshold, labels=[0, 1]).ravel()
+            )
+            ax.plot(
+                [b["predicted"] for b in bins],
+                [b["observed"] for b in bins],
+                "o-",
+                label=f"{name} calibrated ({status}; research only)",
+            )
+        operating = (
+            _operating(y_array, p, bundle.threshold)
+            if p is not None and bundle.threshold is not None
+            else {}
+        )
         results["models"][name] = {
             "raw": _ranking(y_array, raw),
-            "calibrated": _ranking(y_array, p),
+            "calibrated": _ranking(y_array, p) if p is not None else None,
             "training_prevalence_brier": float(
                 brier_score_loss(y_array, np.full(len(y_array), bundle.training_prevalence))
             ),
             "raw_calibration": calibration_parameters(y_array, raw),
-            "calibration": calibration_parameters(y_array, p),
+            "calibration": calibration_parameters(y_array, p) if p is not None else None,
             "bins": bins,
+            "raw_bins": raw_bins,
             "threshold": bundle.threshold,
             "tp": tp,
             "fp": fp,
             "tn": tn,
             "fn": fn,
-            "sensitivity": _ratio(tp, tp + fn),
-            "specificity": _ratio(tn, tn + fp),
-            "ppv": _ratio(tp, tp + fp),
-            "npv": _ratio(tn, tn + fn),
-            "f1": _ratio(2 * tp, 2 * tp + fp + fn),
+            "sensitivity": operating.get("sensitivity"),
+            "specificity": operating.get("specificity"),
+            "ppv": operating.get("ppv"),
+            "npv": operating.get("npv"),
+            "f1": operating.get("f1"),
             "missing_labs_mean": float(X[list(LABS)].isna().sum(axis=1).mean()),
+            "calibration_status": status,
+            "probability_use": "research-only" if status == "fitted" else "invalid-diagnostic-only",
+            "classification_use": "fixed validation operating point; not clinical advice",
         }
     ax.set(
         xlabel="Mean predicted risk (probability)",
@@ -224,8 +288,8 @@ def evaluate_models(
                         samples.setdefault(key, []).append(value)
                     values[key] = value
             threshold = bundles[name].threshold
-            if threshold is None:
-                raise ValueError("Frozen operating threshold is missing.")
+            if threshold is None or "calibrated" not in variants:
+                continue
             for metric, value in _operating(
                 y_array[index], variants["calibrated"][index], threshold
             ).items():
@@ -234,12 +298,16 @@ def evaluate_models(
                     undefined[key] = undefined.get(key, 0) + 1
                 else:
                     samples.setdefault(key, []).append(value)
+                values[key] = value
         names = list(bundles)
         if len(names) == 2:
             for variant in ("raw", "calibrated"):
-                for metric in ("auroc", "average_precision", "brier"):
-                    left = values[f"{names[0]}.{variant}.{metric}"]
-                    right = values[f"{names[1]}.{variant}.{metric}"]
+                metrics = ("auroc", "average_precision", "brier")
+                if variant == "calibrated":
+                    metrics += ("sensitivity", "specificity", "ppv", "npv", "f1")
+                for metric in metrics:
+                    left = values.get(f"{names[0]}.{variant}.{metric}")
+                    right = values.get(f"{names[1]}.{variant}.{metric}")
                     key = f"paired_{names[1]}_minus_{names[0]}.{variant}.{metric}"
                     if left is None or right is None:
                         undefined[key] = undefined.get(key, 0) + 1
@@ -264,6 +332,8 @@ def evaluate_models(
             ("raw", model_result["raw"]),
             ("calibrated", model_result["calibrated"]),
         ):
+            if scores is None:
+                continue
             performance_rows.append(
                 {
                     "model": name,
@@ -273,6 +343,10 @@ def evaluate_models(
                     "events": results["events"],
                     "prevalence": results["prevalence"],
                     "training_prevalence_brier": model_result["training_prevalence_brier"],
+                    "calibration_status": model_result["calibration_status"],
+                    "probability_use": (
+                        "raw-research-only" if variant == "raw" else model_result["probability_use"]
+                    ),
                 }
             )
     pd.DataFrame(performance_rows).to_csv(output / "performance.csv", index=False)

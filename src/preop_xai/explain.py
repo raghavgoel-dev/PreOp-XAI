@@ -18,7 +18,7 @@ import shap
 from scipy.special import expit
 from shap.maskers import Independent
 
-from .calibration import probabilities, raw_scores
+from .calibration import calibration_status, probabilities, raw_scores
 from .preprocessing import FEATURES
 
 
@@ -34,9 +34,11 @@ class RawExplanation(TypedDict):
 
 
 class ExplanationCalibration(TypedDict):
-    intercept: float
-    slope: float
+    intercept: float | None
+    slope: float | None
     fitted: bool
+    status: str
+    use: str
 
 
 class LocalGroup(TypedDict):
@@ -54,15 +56,15 @@ class DependenceLookup(TypedDict):
 
 class ExplanationSummary(TypedDict):
     raw_additivity: bool
-    calibrated_logit_additivity: bool
+    calibrated_logit_additivity: bool | None
     calibration: ExplanationCalibration
     clinical_features: list[str]
     global_mean_absolute_raw: dict[str, float]
-    global_mean_absolute_calibrated: dict[str, float]
+    global_mean_absolute_calibrated: dict[str, float] | None
     missingness_mean_absolute_raw: dict[str, float]
     transformed_mean_absolute_raw: dict[str, float]
     baseline_raw_mean: float
-    baseline_calibrated_mean: float
+    baseline_calibrated_mean: float | None
     local_groups: dict[str, LocalGroup]
     dependence_lookup: dict[str, DependenceLookup]
 
@@ -260,6 +262,8 @@ def explain_models(
     for key, bundle in bundles.items():
         key = _model_key(key)
         data = _explain_raw(bundle, background, X_explain)
+        status = calibration_status(bundle)
+        available = status in {"fitted", "nonpositive-slope"}
         a, b = _calibration_parameters(bundle)
         calibrated_values = b * data["values"]
         calibrated_base = a + b * data["baseline"]
@@ -271,8 +275,10 @@ def explain_models(
             atol=1e-5,
         ):
             raise ValueError("Calibrated-logit SHAP additivity failed.")
-        risk = np.asarray(probabilities(bundle, X_explain, calibrated=True)).reshape(-1)
-        if not np.allclose(expit(calibrated_scores), risk, rtol=1e-5, atol=1e-7):
+        risk = np.asarray(
+            probabilities(bundle, X_explain, calibrated=available, allow_invalid=True)
+        ).reshape(-1)
+        if available and not np.allclose(expit(calibrated_scores), risk, rtol=1e-5, atol=1e-7):
             raise ValueError("Recalibrated logits disagree with model probabilities.")
         grouped = data["grouped"]
         missing_values = data["values"][:, data["missing"]]
@@ -282,13 +288,21 @@ def explain_models(
         global_calibrated = np.abs(b * grouped).mean(axis=0)
         summary: ExplanationSummary = {
             "raw_additivity": True,
-            "calibrated_logit_additivity": True,
-            "calibration": {"intercept": a, "slope": b, "fitted": bundle.calibrator is not None},
+            "calibrated_logit_additivity": True if available else None,
+            "calibration": {
+                "intercept": a if available else None,
+                "slope": b if available else None,
+                "fitted": available,
+                "status": status,
+                "use": "research-only" if status == "fitted" else "invalid-diagnostic-only",
+            },
             "clinical_features": list(FEATURES),
             "global_mean_absolute_raw": dict(zip(FEATURES, global_raw.tolist(), strict=True)),
             "global_mean_absolute_calibrated": dict(
                 zip(FEATURES, global_calibrated.tolist(), strict=True)
-            ),
+            )
+            if available
+            else None,
             "missingness_mean_absolute_raw": dict(
                 zip(FEATURES, np.abs(missing_grouped).mean(axis=0).tolist(), strict=True)
             ),
@@ -296,7 +310,7 @@ def explain_models(
                 zip(data["names"], np.abs(data["values"]).mean(axis=0).tolist(), strict=True)
             ),
             "baseline_raw_mean": float(data["baseline"].mean()),
-            "baseline_calibrated_mean": float(calibrated_base.mean()),
+            "baseline_calibrated_mean": float(calibrated_base.mean()) if available else None,
             "local_groups": {},
             "dependence_lookup": {},
         }
@@ -352,13 +366,16 @@ def explain_models(
                 result["figures"].append(relative)
 
         threshold = bundle.threshold
-        if threshold is None or not np.isfinite(threshold):
+        if available and (threshold is None or not np.isfinite(threshold)):
             raise ValueError("Local error groups require a fixed finite threshold.")
-        predicted = risk >= threshold
+        predicted = risk >= threshold if threshold is not None else np.zeros(len(risk), dtype=bool)
         selected = np.full(4, -1, dtype=int)
         for number, (label, truth, prediction) in enumerate(
             [("TP", 1, True), ("FP", 0, True), ("TN", 0, False), ("FN", 1, False)]
         ):
+            if not available:
+                summary["local_groups"][label] = {"n": 0, "status": "calibration-unavailable"}
+                continue
             candidates = np.flatnonzero((y == truth) & (predicted == prediction))
             if not len(candidates):
                 summary["local_groups"][label] = {"n": 0, "status": "empty"}
@@ -370,7 +387,7 @@ def explain_models(
             _bar(
                 b * grouped[position],
                 FEATURES,
-                f"{key} {label}: calibrated-logit contributions",
+                f"{key} {label}: calibrated logit ({status}; research only)",
                 output / relative,
             )
             (output / relative).chmod(0o600)
@@ -387,13 +404,15 @@ def explain_models(
             private / f"{key}_explanations.npz",
             raw_values=data["values"],
             raw_baseline=data["baseline"],
-            calibrated_values=calibrated_values,
-            calibrated_baseline=calibrated_base,
+            calibrated_values=calibrated_values if available else np.empty((len(X_explain), 0)),
+            calibrated_baseline=calibrated_base if available else np.empty(0),
+            calibration_status=np.asarray(status),
             grouped_raw=grouped,
             transformed_names=np.asarray(data["names"]),
             background_positions=positions,
             selected_local_positions=selected,
             probabilities=risk,
+            probability_scale=np.asarray("calibrated" if available else "raw-only"),
         )
         result["models"][key] = summary
     _write_json(output / "explain.json", result)

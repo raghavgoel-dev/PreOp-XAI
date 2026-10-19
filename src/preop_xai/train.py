@@ -13,7 +13,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
-from preop_xai.preprocessing import feature_matrix, make_preprocessor
+from preop_xai.preprocessing import binary_outcomes, feature_matrix, make_preprocessor
 
 
 @dataclass
@@ -40,6 +40,7 @@ def fit_models(
 ) -> dict[str, ModelBundle]:
     """Tune both families on identical training observations; never use validation."""
     x = feature_matrix(X)
+    binary_outcomes(x, y)
     y = y.astype(int)
     counts = y.value_counts()
     if set(counts.index) != {0, 1} or int(counts.min()) < 2:

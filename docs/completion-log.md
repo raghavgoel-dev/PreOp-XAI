@@ -1,5 +1,27 @@
 # Task completion log
 
+## Reliability and saved-inference completion - 18 October 2026
+
+Completed the original `demo_new` warning investigation, end-to-end implementation
+trace, independent actual-source readiness audit, explicit status/calibration
+policy, strict canonical saved-model CLI inference, and new unchanged-source
+synthetic campaign at `artifacts/reliability-20261018`. The diagnostic script,
+measured intercepts/slopes/counts, source references, model uncertainty,
+real-review blockers and full verification receipts are in
+`reliability-audit.md`; the actual prediction interface is in `inference.md`.
+
+The final suite passed 109 tests. Ruff lint/format and source/changed-test
+semantic checks passed. Four pre-existing type diagnostics in untouched data
+tests and the unavailable YAML LSP are disclosed. Separate-process inference
+matches pre-save LR/XGBoost predictions, never fits, and withholds invalid
+calibrated risk and classifications unless returning explicitly raw-only
+research output. Respiratory remains unreliable in the synthetic campaign;
+real modeling remains blocked by genuine review/source prerequisites.
+
+Previous campaigns and initial shared README/guide/readiness-document work were
+preserved. No project commit, clinical approval, seed search, label reversal,
+warning suppression or held-out model tuning was performed.
+
 ## Discovery
 
 ### Read complete plan synopsis repository and history

@@ -120,6 +120,8 @@ def _sealed_inputs(settings: Settings, endpoint: str) -> dict[str, str]:
         *sorted(Path("src/preop_xai").glob("*.py")),
         *(output / f"{p}.parquet" for p in ("train", "validation", "test")),
         output / endpoint / "models.joblib",
+        output / endpoint / "bundle.json",
+        output / endpoint / "calibration.json",
         output / endpoint / "explain.json",
         output / endpoint / "stability.json",
     ]
@@ -148,12 +150,16 @@ def run_stage(
     output.mkdir(parents=True, exist_ok=True)
     if stage == "audit":
         from preop_xai.audit import audit_raw
+        from preop_xai.status import write_status
 
         typer.echo(str(audit_raw(settings.raw_dir, output / "audit")))
+        write_status(settings, stage)
         return
     if stage == "report":
         from preop_xai.reporting import build_report
+        from preop_xai.status import write_status
 
+        write_status(settings, stage)
         typer.echo(str(build_report(output)))
         return
     require_review(settings, endpoint)
@@ -292,11 +298,27 @@ def run_stage(
             ).to_csv(destination / "lr_coefficients.csv", index=False)
         case "calibrate":
             from preop_xai.calibration import calibrate_models
+            from preop_xai.inference import write_bundle_metadata
 
             models = joblib.load(destination / "models.joblib")
             x, y = _partition(output, "validation", endpoint)
             calibrate_models(models, x, y)
             joblib.dump(models, destination / "models.joblib")
+            write_json(
+                destination / "calibration.json",
+                {name: bundle.diagnostics for name, bundle in models.items()},
+            )
+            write_bundle_metadata(
+                destination,
+                endpoint=endpoint,
+                synthetic_only=settings.synthetic_only,
+                review_status=(
+                    "synthetic-fixture-only"
+                    if settings.synthetic_only
+                    else "attested-not-independently-verified"
+                ),
+                feature_mapping=_read_yaml(settings.feature_map),
+            )
         case "explain":
             from preop_xai.explain import explain_models
 
@@ -331,8 +353,8 @@ def run_stage(
             )
         case "freeze":
             models = joblib.load(destination / "models.joblib")
-            if any(b.calibrator is None or b.threshold is None for b in models.values()):
-                raise ValueError("Both validation calibrators and thresholds must be fitted.")
+            if any("calibration_status" not in b.diagnostics for b in models.values()):
+                raise ValueError("Both models require a recorded validation calibration attempt.")
             path = destination / "freeze.json"
             if path.exists():
                 raise ValueError("Analysis is already frozen.")
@@ -364,7 +386,14 @@ def run_stage(
                 settings.evaluation_bootstraps,
                 settings.seed,
             )
-            write_json(destination / "evaluation_complete.json", {"completed": True})
+            write_json(
+                destination / "evaluation_complete.json",
+                {"completed": True, "models_sha256": file_hash(destination / "models.joblib")},
+            )
         case _:
             raise ValueError(f"Unknown pipeline stage: {stage}")
-    typer.echo(f"{stage}: complete ({output})")
+    from preop_xai.status import write_status
+
+    status_stage = f"explain-{partition}" if stage == "explain" and partition == "test" else stage
+    write_status(settings, status_stage, endpoint)
+    typer.echo(f"{stage}: complete ({output}); research execution, not clinical validation")

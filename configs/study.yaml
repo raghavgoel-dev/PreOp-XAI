@@ -1,4 +1,4 @@
-protocol_version: "1.0"
+protocol_version: "1.1"
 title: "Explainable preoperative mortality risk prediction in MOVER EPIC"
 raw_dir: data/EPIC_EMR/EMR
 output_dir: artifacts/study

@@ -1,5 +1,16 @@
 # Explanation lane implementation
 
+## Protocol 1.1 reliability amendment - 18 October 2026
+
+Finite nonpositive recalibration remains explainable algebraically, but JSON
+and local figure titles label it invalid-fit research diagnostics. Negative
+slopes reverse SHAP directions; passing additivity does not validate risk.
+Unavailable calibration produces raw explanations only, null calibrated
+summaries and no threshold-defined local groups. It is never silently treated
+as identity calibration. The saved fitted pipeline/preprocessing remains the
+explanation target. Stability still uses raw logits and now escalates estimator
+convergence warnings rather than continuing an unconverged refit.
+
 ## Completion entry — 17 October 2026
 
 Implemented `explain_models`, `run_stability`, and `build_report`, with direct

@@ -138,7 +138,7 @@ def test_stability_does_not_mutate_original_and_is_reproducible(synthetic, tmp_p
     first = run_stability({"lr": bundle}, train, y, validation, tmp_path / "first", refits=3)
     second = run_stability({"lr": bundle}, train, y, validation, tmp_path / "second", refits=3)
     assert first == second
-    assert first["models"]["lr"]["successful_refits"] == 3
+    assert first["models"]["lr"].get("successful_refits") == 3
     np.testing.assert_array_equal(bundle.pipeline.named_steps["model"].coef_, coefficient)
     np.testing.assert_array_equal(bundle.calibrator.coef_, calibration)
     arrays = np.load(tmp_path / "first/private/lr_stability.npz")
@@ -167,3 +167,36 @@ def test_identity_columns_are_rejected(synthetic, tmp_path):
             labels,
             tmp_path,
         )
+
+
+def test_invalid_calibrated_shap_is_flagged_but_still_additive(synthetic, tmp_path):
+    # Given: a reversed affine recalibrator that must not be interpreted as valid risk.
+    train, y, validation, labels = synthetic
+    bundle = make_bundle(train, y)
+    bundle.calibrator.coef_[:] = -0.6
+    # When: producing explicit invalid-fit diagnostic explanations.
+    result = explain_models({"lr": bundle}, train, validation, labels, tmp_path)
+    # Then: directions reverse algebraically, and the artifact records invalid use.
+    summary = result["models"]["lr"]
+    assert summary["calibration"]["status"] == "nonpositive-slope"
+    assert summary["calibration"]["use"] == "invalid-diagnostic-only"
+    arrays = np.load(tmp_path / "private/lr_explanations.npz")
+    np.testing.assert_allclose(arrays["calibrated_values"], -0.6 * arrays["raw_values"])
+    assert summary["calibrated_logit_additivity"] is True
+
+
+def test_unavailable_calibration_does_not_create_calibrated_explanations(synthetic, tmp_path):
+    # Given: no fitted recalibrator.
+    train, y, validation, labels = synthetic
+    bundle = make_bundle(train, y)
+    bundle.calibrator = None
+    bundle.threshold = None
+    bundle.diagnostics = {"calibration_status": "constant-scores"}
+    # When: retaining raw explanation evidence for the research report.
+    result = explain_models({"lr": bundle}, train, validation, labels, tmp_path)
+    # Then: identity calibration is not silently presented as a fitted calibrator.
+    summary = result["models"]["lr"]
+    assert summary["raw_additivity"] is True
+    assert summary["calibrated_logit_additivity"] is None
+    assert summary["global_mean_absolute_calibrated"] is None
+    assert summary["local_groups"]["TP"]["status"] == "calibration-unavailable"

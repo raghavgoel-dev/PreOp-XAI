@@ -105,6 +105,25 @@ def report(config: Config = Path("configs/study.yaml")) -> None:
 
 
 @app.command()
+def predict(
+    bundle: Annotated[Path, typer.Option(exists=True, file_okay=False)],
+    input_path: Annotated[Path, typer.Option("--input", exists=True, dir_okay=False)],
+    output: Annotated[Path, typer.Option()],
+    model: Annotated[str, typer.Option()],
+    research_only: Annotated[bool, typer.Option("--research-only")] = False,
+) -> None:
+    """Predict canonical feature CSVs using trusted saved preprocessing, without fitting."""
+    from preop_xai.inference import predict_file
+
+    try:
+        predict_file(bundle, input_path, output, model, research_only)
+    except (ValueError, FileNotFoundError) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from error
+    typer.echo(f"Predictions saved to {output}; research only, clinical use unsupported.")
+
+
+@app.command()
 def demo(
     output: Annotated[Path, typer.Option()] = Path("artifacts/demo"), seed: int = 2026
 ) -> None:

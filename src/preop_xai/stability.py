@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import warnings
 from collections.abc import Iterable
 from itertools import combinations
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import NotRequired, TypedDict
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.base import clone
+from sklearn.exceptions import ConvergenceWarning
 
 from .explain import (
     _background,
@@ -196,7 +198,9 @@ def run_stability(
             candidate = copy.copy(bundle)
             candidate.pipeline = clone(bundle.pipeline)
             candidate.calibrator = None
-            candidate.pipeline.fit(X_train.iloc[draws[index]], y[draws[index]])
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", ConvergenceWarning)
+                candidate.pipeline.fit(X_train.iloc[draws[index]], y[draws[index]])
             data = _explain_raw(candidate, background, X_validation)
             draw_results[key] = (data["grouped"], data["baseline"])
         if len(draw_results) == len(bundles):

@@ -1,5 +1,13 @@
 # Implementation contract
 
+Protocol 1.1 amendment: `probabilities` rejects invalid calibration by default.
+Only explicit research evaluation/explanation can opt into finite nonpositive
+fits with `allow_invalid=True`. Unavailable calibration is raw-only.
+`inference.predict_file` and `write_bundle_metadata` provide the strict portable
+CSV boundary documented in `inference.md`. `status.write_status` records
+execution separately from review, calibration, internal evaluation and
+unsupported clinical use. New seals include bundle/calibration metadata.
+
 The project plan and synopsis dated 17 October 2026 agree. The core study uses
 MOVER EPIC only, one indexed eligible adult operation per patient, mortality
 and a conditional reviewed respiratory endpoint. VitalDB is an optional later
